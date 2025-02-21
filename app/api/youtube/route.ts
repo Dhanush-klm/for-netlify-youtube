@@ -1,7 +1,5 @@
 import { NextResponse } from 'next/server';
-import { google } from 'googleapis';
-
-const YOUTUBE_API_KEY = process.env.YOUTUBE_API_KEY;
+import { YoutubeTranscript } from 'youtube-transcript';
 
 export async function POST(request: Request) {
   try {
@@ -17,39 +15,19 @@ export async function POST(request: Request) {
       );
     }
 
-    // Initialize YouTube API client
-    const youtube = google.youtube({
-      version: 'v3',
-      auth: YOUTUBE_API_KEY,
-    });
+    // Fetch transcript
+    const transcript = await YoutubeTranscript.fetchTranscript(videoId);
+    const fullText = transcript.map(item => item.text).join(' ');
 
-    // Fetch video details from YouTube API
-    const response = await youtube.videos.list({
-      part: ['snippet', 'statistics'],
-      id: [videoId],
-    });
-
-    const video = response.data.items?.[0];
-    if (!video) {
-      return NextResponse.json(
-        { error: 'Video not found' },
-        { status: 404 }
-      );
-    }
-
-    return NextResponse.json({
-      title: video.snippet?.title,
-      description: video.snippet?.description,
-      viewCount: video.statistics?.viewCount,
-      likeCount: video.statistics?.likeCount,
-      publishedAt: video.snippet?.publishedAt,
-      channelTitle: video.snippet?.channelTitle,
+    return NextResponse.json({ 
+      transcript: transcript,
+      fullText: fullText 
     });
 
   } catch (error) {
-    console.error('Error processing YouTube URL:', error);
+    console.error('Error:', error);
     return NextResponse.json(
-      { error: 'Failed to process YouTube URL' },
+      { error: 'Failed to fetch transcript' },
       { status: 500 }
     );
   }
